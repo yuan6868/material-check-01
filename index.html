@@ -672,6 +672,72 @@
                 matchMode = savedMode;
                 document.querySelector(`input[name="matchMode"][value="${savedMode}"]`).checked = true;
             }
+
+            // === 配置对话框事件监听器 ===
+
+            // 刷新数据按钮
+            document.getElementById('refreshDataBtn').addEventListener('click', function() {
+                loadRemoteData(true);
+            });
+
+            // 配置数据URL按钮
+            document.getElementById('configUrlBtn').addEventListener('click', function() {
+                const currentUrl = localStorage.getItem('dataUrl') || '';
+                const modal = document.getElementById('configModal');
+                const input = document.getElementById('dataUrlInput');
+
+                // 显示当前配置的URL
+                input.value = currentUrl;
+
+                // 显示对话框
+                modal.classList.add('active');
+
+                // 聚焦到输入框
+                setTimeout(() => input.focus(), 100);
+            });
+
+            // 取消按钮
+            document.getElementById('modalCancelBtn').addEventListener('click', function() {
+                document.getElementById('configModal').classList.remove('active');
+            });
+
+            // 点击遮罩层关闭
+            document.getElementById('configModal').addEventListener('click', function(e) {
+                if (e.target.id === 'configModal') {
+                    this.classList.remove('active');
+                }
+            });
+
+            // 保存按钮
+            document.getElementById('modalSaveBtn').addEventListener('click', function() {
+                const input = document.getElementById('dataUrlInput');
+                const newUrl = input.value.trim();
+
+                if (newUrl) {
+                    localStorage.setItem('dataUrl', newUrl);
+                    document.getElementById('configModal').classList.remove('active');
+
+                    // 显示成功提示
+                    const statusEl = document.getElementById('dataStatus');
+                    statusEl.textContent = '✓ 数据源地址已更新！请点击"刷新数据"按钮加载';
+                    statusEl.style.background = '#d1fae5';
+                    statusEl.style.color = '#065f46';
+
+                    // 3秒后恢复
+                    setTimeout(() => {
+                        updateDataStatus();
+                    }, 3000);
+                } else {
+                    alert('请输入有效的URL地址');
+                }
+            });
+
+            // 输入框回车键保存
+            document.getElementById('dataUrlInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('modalSaveBtn').click();
+                }
+            });
         });
 
         // 初始化数据URL
@@ -843,70 +909,6 @@
             result.push(current);
             return result;
         }
-
-        // 刷新数据按钮
-        document.getElementById('refreshDataBtn').addEventListener('click', function() {
-            loadRemoteData(true);
-        });
-
-        // 配置数据URL按钮
-        document.getElementById('configUrlBtn').addEventListener('click', function() {
-            const currentUrl = localStorage.getItem('dataUrl') || '';
-            const modal = document.getElementById('configModal');
-            const input = document.getElementById('dataUrlInput');
-
-            // 显示当前配置的URL
-            input.value = currentUrl;
-
-            // 显示对话框
-            modal.classList.add('active');
-
-            // 聚焦到输入框
-            setTimeout(() => input.focus(), 100);
-        });
-
-        // 取消按钮
-        document.getElementById('modalCancelBtn').addEventListener('click', function() {
-            document.getElementById('configModal').classList.remove('active');
-        });
-
-        // 点击遮罩层关闭
-        document.getElementById('configModal').addEventListener('click', function(e) {
-            if (e.target.id === 'configModal') {
-                this.classList.remove('active');
-            }
-        });
-
-        // 保存按钮
-        document.getElementById('modalSaveBtn').addEventListener('click', function() {
-            const input = document.getElementById('dataUrlInput');
-            const newUrl = input.value.trim();
-
-            if (newUrl) {
-                localStorage.setItem('dataUrl', newUrl);
-                document.getElementById('configModal').classList.remove('active');
-
-                // 显示成功提示
-                const statusEl = document.getElementById('dataStatus');
-                statusEl.textContent = '✓ 数据源地址已更新！请点击"刷新数据"按钮加载';
-                statusEl.style.background = '#d1fae5';
-                statusEl.style.color = '#065f46';
-
-                // 3秒后恢复
-                setTimeout(() => {
-                    updateDataStatus();
-                }, 3000);
-            } else {
-                alert('请输入有效的URL地址');
-            }
-        });
-
-        // 输入框回车键保存
-        document.getElementById('dataUrlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('modalSaveBtn').click();
-            }
-        });
 
         // 初始化同步码
         function initSyncCode() {
