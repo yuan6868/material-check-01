@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>线边料位校验系统</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: #10b981;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+            margin-bottom: 15px;
+            border: 3px solid #667eea;
+        }
+
+        .info-box {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-box.success {
+            background: #d1fae5;
+            border: 3px solid #10b981;
+        }
+
+        .info-box.error {
+            background: #fee2e2;
+            border: 3px solid #ef4444;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 15px 10px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-size: 14px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transform: scale(1.05);
+        }
+
+        .step.completed {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .step-number {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .record-item {
+            background: #f9fafb;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .record-item.success {
+            border-left-color: #10b981;
+        }
+
+        .record-item.error {
+            border-left-color: #ef4444;
+        }
+
+        .record-time {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .record-content {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .record-result {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .record-result.success {
+            color: #10b981;
+        }
+
+        .record-result.error {
+            color: #ef4444;
+        }
+
+        .records-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .data-status {
+            text-align: center;
+            padding: 15px;
+            background: #fef3c7;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .data-status.loaded {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .loading-status {
+            text-align: center;
+            padding: 10px;
+            background: #e0e7ff;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #3730a3;
+        }
+
+        .match-config {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .match-option {
+            margin-bottom: 10px;
+        }
+
+        .match-option label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .match-option input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        .match-option input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            margin: 0 5px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+
+        .sync-section {
+            background: #eff6ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .sync-code {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            color: #667eea;
+            margin: 10px 0;
+            border: 2px dashed #667eea;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .scan-prompt {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid #f59e0b;
+        }
+
+        .scan-prompt.step1 {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1e40af;
+        }
+
+        .scan-prompt.step2 {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .section {
+                padding: 15px;
+            }
+
+            .step {
+                font-size: 12px;
+                padding: 10px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>线边料位校验系统 v3.0</h1>
+            <p>远程数据 | 自动更新 | 离线缓存 | 智能校验</p>
+        </div>
+
+        <div id="loadingStatus" class="loading-status">
+            正在加载扫码组件...
+        </div>
+
+        <!-- 数据配置区域 -->
+        <div class="section">
+            <div class="section-title">步骤1：数据配置</div>
+            <div id="dataStatus" class="data-status">
+                正在加载数据...
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <button id="refreshDataBtn" class="btn btn-success">🔄 刷新数据</button>
+                <button id="configUrlBtn" class="btn btn-warning" style="margin-top: 5px;">⚙️ 配置数据源地址</button>
+            </div>
+
+            <div class="info-box" style="margin-top: 10px;">
+                <div class="info-label">数据说明：</div>
+                <div style="font-size: 13px; color: #666; margin-top: 5px;">
+                    • 系统自动从远程服务器加载最新数据<br>
+                    • 数据本地缓存，离线也可使用<br>
+                    • 点击"刷新数据"获取最新版本<br>
+                    • 数据更新时间：<span id="dataUpdateTime">-</span>
+                </div>
+            </div>
+
+            <!-- 匹配模式配置 -->
+            <div class="match-config">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #333;">🔍 匹配模式设置：</div>
+                <div class="match-option">
+                    <label>
+                        <input type="radio" name="matchMode" value="exact" checked>
+                        精确匹配（扫描内容必须完全一致）
+                    </label>
+                </div>
+                <div class="match-option">
+                    <label>
+                        <input type="radio" name="matchMode" value="contains">
+                        包含匹配（扫描内容包含目标即可）
+                    </label>
+                </div>
+                <div class="match-option">
+                    <label>
+                        <input type="radio" name="matchMode" value="extract">
+                        智能提取（从扫描内容中自动提取关键信息）
+                    </label>
+                    <div style="margin-left: 24px; margin-top: 5px; font-size: 13px; color: #666;">
+                        例如：扫描"ABC-P001-XYZ" 可以自动提取 "P001"
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 扫描校验区域 -->
+        <div class="section">
+            <div class="section-title">步骤2：扫描校验</div>
+
+            <div class="step-indicator">
+                <div class="step" id="step1">
+                    <div class="step-number">①</div>
+                    <div>扫零件号</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-number">②</div>
+                    <div>扫校验内容</div>
+                </div>
+            </div>
+
+            <div id="scanPrompt" class="scan-prompt hidden"></div>
+
+            <div id="scanArea">
+                <button id="startScanBtn" class="btn">🎯 开始扫描零件号</button>
+                <div id="reader"></div>
+                <button id="stopScanBtn" class="btn btn-danger hidden">⏸ 停止扫描</button>
+            </div>
+
+            <div id="partInfo" class="info-box hidden">
+                <div class="info-label">✓ 已扫描零件号：</div>
+                <div class="info-value" id="partNumber"></div>
+                <div class="info-label" style="margin-top: 10px;">📋 对应校验内容：</div>
+                <div class="info-value" id="expectedContent"></div>
+                <div style="margin-top: 20px; text-align: center; padding: 15px; background: #fef3c7; border-radius: 8px; border: 2px solid #f59e0b;">
+                    <div style="font-size: 18px; font-weight: bold; color: #92400e; margin-bottom: 5px;">
+                        ⌨️ 按回车键继续
+                    </div>
+                    <div style="font-size: 13px; color: #78350f; margin-bottom: 10px;">
+                        确认信息无误后，按键盘回车键（Enter）进入步骤二
+                    </div>
+                    <button id="continueToStep2Btn" class="btn btn-success" style="margin-top: 10px;">
+                        ▶ 继续扫描校验内容
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultInfo" class="info-box hidden">
+                <div class="info-label">扫描的校验内容：</div>
+                <div class="info-value" id="scannedContent"></div>
+                <div class="record-result" id="compareResult"></div>
+            </div>
+
+            <button id="resetBtn" class="btn hidden" style="margin-top: 10px;">🔄 重新开始新的校验</button>
+        </div>
+
+        <!-- 云端同步区域 -->
+        <div class="section">
+            <div class="section-title">🌐 记录同步</div>
+            <div class="sync-section">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #1e40af;">同步码：</div>
+                <div class="sync-code" id="syncCode">-</div>
+                <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
+                    • 手机和电脑使用<strong>相同的同步码</strong>，记录会自动同步<br>
+                    • 同步码保存在浏览器中，下次打开自动恢复<br>
+                    • 可以自定义同步码，方便团队共享
+                </div>
+                <button id="changeSyncCodeBtn" class="btn btn-warning">🔑 修改同步码</button>
+                <button id="syncNowBtn" class="btn" style="margin-top: 5px;">🔄 立即同步记录</button>
+                <div id="syncStatus" style="margin-top: 10px; font-size: 13px; color: #059669; text-align: center;"></div>
+            </div>
+        </div>
+
+        <!-- 校验记录区域 -->
+        <div class="section">
+            <div class="section-title">
+                📝 校验记录
+                <button id="exportBtn" class="btn btn-success" style="width: auto; padding: 8px 16px; float: right; font-size: 14px;">📥 导出Excel</button>
+                <button id="clearRecordsBtn" class="btn btn-danger" style="width: auto; padding: 8px 16px; float: right; font-size: 14px; margin-right: 10px;">🗑️ 清空</button>
+            </div>
+            <div class="records-container" id="recordsContainer">
+                <div style="text-align: center; color: #999; padding: 20px;">暂无校验记录</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let partsData = {};
+        let html5QrcodeScanner = null;
+        let currentStep = 1;
+        let currentPartNumber = '';
+        let expectedContent = '';
+        let records = [];
+        let syncCode = '';
+        let matchMode = 'exact';
+
+        // 页面加载时初始化
+        window.addEventListener('load', function() {
+            const loadingStatus = document.getElementById('loadingStatus');
+            if (typeof Html5Qrcode === 'undefined' || typeof XLSX === 'undefined') {
+                loadingStatus.textContent = '⚠️ 扫码组件加载失败，请检查网络连接或刷新页面';
+                loadingStatus.style.background = '#fee2e2';
+                loadingStatus.style.color = '#991b1b';
+            } else {
+                loadingStatus.textContent = '✓ 系统就绪，可以开始使用';
+                loadingStatus.style.background = '#d1fae5';
+                loadingStatus.style.color = '#065f46';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initSyncCode();
+            loadRecordsFromStorage();
+            displayRecords();
+
+            // 初始化数据URL
+            initDataUrl();
+
+            // 自动加载远程数据
+            loadRemoteData();
+
+            // 监听匹配模式变化
+            document.querySelectorAll('input[name="matchMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    matchMode = this.value;
+                    localStorage.setItem('matchMode', matchMode);
+                });
+            });
+
+            // 加载保存的匹配模式
+            const savedMode = localStorage.getItem('matchMode');
+            if (savedMode) {
+                matchMode = savedMode;
+                document.querySelector(`input[name="matchMode"][value="${savedMode}"]`).checked = true;
+            }
+        });
+
+        // 初始化数据URL
+        function initDataUrl() {
+            let dataUrl = localStorage.getItem('dataUrl');
+            if (!dataUrl) {
+                // 默认数据URL（用户需要替换为自己的）
+                dataUrl = 'https://raw.githubusercontent.com/your-username/your-repo/main/data.csv';
+                localStorage.setItem('dataUrl', dataUrl);
+            }
+        }
+
+        // 加载远程数据
+        async function loadRemoteData(showAlert = false) {
+            const statusEl = document.getElementById('dataStatus');
+            statusEl.textContent = '正在加载数据...';
+            statusEl.classList.remove('loaded');
+
+            try {
+                const dataUrl = localStorage.getItem('dataUrl');
+
+                if (!dataUrl || dataUrl.includes('your-username')) {
+                    statusEl.textContent = '⚠️ 请先配置数据源地址';
+                    statusEl.style.background = '#fef3c7';
+
+                    // 尝试加载本地缓存
+                    const cachedData = localStorage.getItem('partsData');
+                    if (cachedData) {
+                        partsData = JSON.parse(cachedData);
+                        updateDataStatus();
+                        return;
+                    }
+                    return;
+                }
+
+                const response = await fetch(dataUrl, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Accept': 'text/csv,text/plain,*/*'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const csvText = await response.text();
+                parseCSVData(csvText);
+
+                // 保存到localStorage
+                localStorage.setItem('partsData', JSON.stringify(partsData));
+                const updateTime = new Date().toLocaleString('zh-CN');
+                localStorage.setItem('dataUpdateTime', updateTime);
+
+                updateDataStatus();
+
+                if (showAlert) {
+                    alert(`数据更新成功！\n共加载 ${Object.keys(partsData).length} 条数据\n更新时间：${updateTime}`);
+                }
+            } catch (error) {
+                console.error('加载数据失败：', error);
+                statusEl.textContent = `⚠️ 加载失败：${error.message}`;
+                statusEl.style.background = '#fee2e2';
+
+                // 尝试使用缓存数据
+                const cachedData = localStorage.getItem('partsData');
+                if (cachedData) {
+                    partsData = JSON.parse(cachedData);
+                    statusEl.textContent = '使用缓存数据（网络加载失败）';
+                    statusEl.style.background = '#fef3c7';
+                    updateDataStatus();
+                } else if (showAlert) {
+                    alert('数据加载失败，且无本地缓存！\n请检查：\n1. 数据源地址是否正确\n2. 网络连接是否正常\n3. 数据文件格式是否正确');
+                }
+            }
+        }
+
+        // 解析CSV数据（改进版，支持引号、特殊字符）
+        function parseCSVData(csvText) {
+            partsData = {};
+
+            // 处理不同的换行符（\r\n, \n, \r）
+            csvText = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            const lines = csvText.split('\n');
+
+            let startRow = 0;
+            let parsedCount = 0;
+
+            // 检测表头
+            if (lines.length > 0) {
+                const firstLine = lines[0];
+                if (firstLine.includes('零件') || firstLine.includes('料号') ||
+                    firstLine.includes('编号') || firstLine.includes('part') ||
+                    firstLine.toLowerCase().includes('number') || firstLine.toLowerCase().includes('code')) {
+                    startRow = 1;
+                }
+            }
+
+            for (let i = startRow; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                // 跳过空行
+                if (!line || line.length === 0) continue;
+
+                try {
+                    let parts;
+
+                    // 支持制表符分隔
+                    if (line.includes('\t')) {
+                        parts = line.split('\t');
+                    }
+                    // 支持CSV引号格式
+                    else if (line.includes('"')) {
+                        parts = parseCSVLine(line);
+                    }
+                    // 普通逗号分隔
+                    else {
+                        parts = line.split(',');
+                    }
+
+                    // 清理并验证数据
+                    if (parts && parts.length >= 2) {
+                        let partNum = parts[0] ? String(parts[0]).trim().replace(/^["']|["']$/g, '') : '';
+                        let checkContent = parts[1] ? String(parts[1]).trim().replace(/^["']|["']$/g, '') : '';
+
+                        // 只添加非空的有效数据
+                        if (partNum && checkContent && partNum !== '' && checkContent !== '') {
+                            partsData[partNum] = checkContent;
+                            parsedCount++;
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`解析第${i+1}行时出错:`, line, e);
+                    // 继续处理下一行，不中断
+                }
+            }
+
+            console.log(`CSV解析完成: 总行数=${lines.length}, 起始行=${startRow}, 成功解析=${parsedCount}条`);
+        }
+
+        // 解析CSV行（处理引号内的逗号）
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                const nextChar = line[i + 1];
+
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        // 转义的引号
+                        current += '"';
+                        i++;
+                    } else {
+                        // 切换引号状态
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    // 字段分隔符
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current);
+            return result;
+        }
+
+        // 刷新数据按钮
+        document.getElementById('refreshDataBtn').addEventListener('click', function() {
+            loadRemoteData(true);
+        });
+
+        // 配置数据URL按钮
+        document.getElementById('configUrlBtn').addEventListener('click', function() {
+            const currentUrl = localStorage.getItem('dataUrl') || '';
+            const newUrl = prompt(
+                '请输入数据源地址（CSV文件URL）：\n\n' +
+                '支持的格式：\n' +
+                '• GitHub Raw URL\n' +
+                '• Gitee Raw URL\n' +
+                '• 任何可访问的CSV文件URL\n\n' +
+                '文件格式：第一列零件号，第二列校验内容',
+                currentUrl
+            );
+
+            if (newUrl && newUrl.trim()) {
+                localStorage.setItem('dataUrl', newUrl.trim());
+                alert('数据源地址已更新！\n点击"刷新数据"加载新数据。');
+            }
+        });
+
+        // 初始化同步码
+        function initSyncCode() {
+            let saved = localStorage.getItem('syncCode');
+            if (!saved) {
+                saved = generateSyncCode();
+                localStorage.setItem('syncCode', saved);
+            }
+            syncCode = saved;
+            document.getElementById('syncCode').textContent = syncCode;
+        }
+
+        // 生成同步码
+        function generateSyncCode() {
+            return 'SYNC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        }
+
+        // 修改同步码
+        document.getElementById('changeSyncCodeBtn').addEventListener('click', function() {
+            const newCode = prompt('请输入新的同步码（6-20个字符）\n\n提示：\n• 使用相同同步码的设备会共享记录\n• 建议使用易记的字符，如：TEAM-001', syncCode);
+            if (newCode && newCode.length >= 6 && newCode.length <= 20) {
+                syncCode = newCode.toUpperCase();
+                localStorage.setItem('syncCode', syncCode);
+                document.getElementById('syncCode').textContent = syncCode;
+                alert('同步码已更新！\n\n请在其他设备上使用相同的同步码以同步记录。');
+                syncRecords();
+            } else if (newCode !== null) {
+                alert('同步码长度必须为6-20个字符');
+            }
+        });
+
+        // 立即同步
+        document.getElementById('syncNowBtn').addEventListener('click', function() {
+            syncRecords();
+        });
+
+        // 同步记录到云端
+        function syncRecords() {
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.textContent = '正在同步...';
+
+            // 保存到localStorage，使用同步码作为key
+            const syncKey = 'records_' + syncCode;
+            localStorage.setItem(syncKey, JSON.stringify(records));
+            localStorage.setItem('syncCode', syncCode);
+
+            setTimeout(() => {
+                syncStatus.textContent = '✓ 同步成功！记录已保存';
+                setTimeout(() => {
+                    syncStatus.textContent = '';
+                }, 3000);
+            }, 500);
+        }
+
+        // 从云端加载记录
+        function loadRecordsFromStorage() {
+            // 优先使用同步码加载
+            if (syncCode) {
+                const syncKey = 'records_' + syncCode;
+                const savedRecords = localStorage.getItem(syncKey);
+                if (savedRecords) {
+                    records = JSON.parse(savedRecords);
+                    return;
+                }
+            }
+
+            // 兜底：加载本地记录
+            const savedRecords = localStorage.getItem('validationRecords');
+            if (savedRecords) {
+                records = JSON.parse(savedRecords);
+            }
+        }
+
+        function updateDataStatus() {
+            const statusEl = document.getElementById('dataStatus');
+            const count = Object.keys(partsData).length;
+            const updateTime = localStorage.getItem('dataUpdateTime') || '未知';
+
+            if (count > 0) {
+                statusEl.textContent = `✓ 已加载 ${count} 条零件数据`;
+                statusEl.classList.add('loaded');
+                document.getElementById('dataUpdateTime').textContent = updateTime;
+            } else {
+                statusEl.textContent = '未加载数据 - 请配置数据源';
+                statusEl.classList.remove('loaded');
+                document.getElementById('dataUpdateTime').textContent = '-';
+            }
+        }
+
+        // 开始扫描按钮
+        document.getElementById('startScanBtn').addEventListener('click', function() {
+            if (typeof Html5Qrcode === 'undefined') {
+                alert('扫码组件加载失败，请刷新页面重试！');
+                return;
+            }
+
+            if (Object.keys(partsData).length === 0) {
+                alert('请先导入Excel数据！');
+                return;
+            }
+            startScanning();
+        });
+
+        // 停止扫描
+        document.getElementById('stopScanBtn').addEventListener('click', function() {
+            stopScanning();
+        });
+
+        // 监听键盘回车事件
+        document.addEventListener('keydown', function(event) {
+            // 检查是否按下回车键（Enter键码为13或key为'Enter'）
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                // 如果当前步骤一完成，且显示了零件信息框，则进入步骤二
+                const partInfoBox = document.getElementById('partInfo');
+                if (currentStep === 1 && !partInfoBox.classList.contains('hidden')) {
+                    event.preventDefault(); // 防止默认行为
+                    continueToStep2();
+                }
+            }
+        });
+
+        // 继续到步骤二按钮（手机/PDA使用）
+        document.getElementById('continueToStep2Btn').addEventListener('click', function() {
+            continueToStep2();
+        });
+
+        // 进入步骤二的统一函数
+        function continueToStep2() {
+            currentStep = 2;
+            updateStepIndicator();
+            updateStartButtonText();
+            startScanning();
+        }
+
+        // 重新开始
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            resetValidation();
+        });
+
+        function startScanning() {
+            document.getElementById('reader').style.display = 'block';
+            document.getElementById('startScanBtn').classList.add('hidden');
+            document.getElementById('stopScanBtn').classList.remove('hidden');
+
+            // 更新提示
+            const prompt = document.getElementById('scanPrompt');
+            prompt.classList.remove('hidden');
+            if (currentStep === 1) {
+                prompt.textContent = '📷 请扫描零件号二维码/条形码';
+                prompt.className = 'scan-prompt step1';
+            } else {
+                prompt.textContent = '📷 请扫描校验内容二维码/条形码';
+                prompt.className = 'scan-prompt step2';
+            }
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanError
+            ).catch(err => {
+                alert('无法启动摄像头，请检查权限设置！');
+                console.error(err);
+                stopScanning();
+            });
+
+            updateStepIndicator();
+        }
+
+        function stopScanning() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('reader').style.display = 'none';
+                    document.getElementById('startScanBtn').classList.remove('hidden');
+                    document.getElementById('stopScanBtn').classList.add('hidden');
+                    document.getElementById('scanPrompt').classList.add('hidden');
+                    updateStartButtonText(); // 更新按钮文字
+                }).catch(err => {
+                    console.error(err);
+                });
+            }
+        }
+
+        // 更新开始扫描按钮的文字
+        function updateStartButtonText() {
+            const btn = document.getElementById('startScanBtn');
+            if (currentStep === 1) {
+                btn.textContent = '🎯 开始扫描零件号';
+            } else if (currentStep === 2) {
+                btn.textContent = '🎯 开始扫描校验内容';
+            }
+        }
+
+        // 智能匹配函数
+        function smartMatch(scanned, target) {
+            scanned = String(scanned).trim();
+            target = String(target).trim();
+
+            if (matchMode === 'exact') {
+                // 精确匹配
+                return scanned === target;
+            } else if (matchMode === 'contains') {
+                // 包含匹配
+                return scanned.includes(target) || target.includes(scanned);
+            } else if (matchMode === 'extract') {
+                // 智能提取：尝试从扫描内容中提取目标
+                // 1. 直接匹配
+                if (scanned === target) return true;
+
+                // 2. 包含匹配
+                if (scanned.includes(target)) return true;
+
+                // 3. 提取所有可能的关键字段（用分隔符分割）
+                const separators = ['-', '_', '/', '\\', '|', ' ', '.', ','];
+                let parts = [scanned];
+
+                for (let sep of separators) {
+                    if (scanned.includes(sep)) {
+                        parts = scanned.split(sep);
+                        break;
+                    }
+                }
+
+                // 检查每个部分是否匹配
+                for (let part of parts) {
+                    part = part.trim();
+                    if (part === target) return true;
+                    if (part.includes(target)) return true;
+                }
+
+                // 4. 检查target是否在parts中
+                for (let sep of separators) {
+                    if (target.includes(sep)) {
+                        const targetParts = target.split(sep);
+                        for (let tPart of targetParts) {
+                            tPart = tPart.trim();
+                            if (scanned.includes(tPart)) return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            const trimmedText = decodedText.trim();
+
+            if (currentStep === 1) {
+                // 步骤1：扫描零件号
+                let foundPart = null;
+                let foundContent = null;
+
+                // 尝试智能匹配
+                for (let partNum in partsData) {
+                    if (smartMatch(trimmedText, partNum)) {
+                        foundPart = partNum;
+                        foundContent = partsData[partNum];
+                        break;
+                    }
+                }
+
+                if (foundPart) {
+                    currentPartNumber = foundPart;
+                    expectedContent = foundContent;
+
+                    document.getElementById('partNumber').textContent = currentPartNumber;
+                    document.getElementById('expectedContent').textContent = expectedContent;
+                    document.getElementById('partInfo').classList.remove('hidden');
+
+                    // 停止扫描，等待用户确认
+                    stopScanning();
+                    playBeep(true);
+                } else {
+                    playBeep(false);
+                    alert(`未找到零件号：${trimmedText}\n\n请检查：\n1. Excel数据是否已导入\n2. 扫描内容是否正确\n3. 尝试调整匹配模式`);
+                }
+            } else if (currentStep === 2) {
+                // 步骤2：扫描校验内容
+                let scannedContent = trimmedText;
+
+                // 应用提取规则：如果包含 '/'，则取最后一段；否则取全量
+                if (scannedContent.includes('/')) {
+                    const parts = scannedContent.split('/');
+                    scannedContent = parts[parts.length - 1].trim(); // 取最后一段并去除空格
+                }
+
+                // 显示原始扫描内容和提取后的内容
+                document.getElementById('scannedContent').textContent = trimmedText +
+                    (trimmedText !== scannedContent ? `\n\n提取结果: ${scannedContent}` : '');
+                document.getElementById('resultInfo').classList.remove('hidden');
+
+                const isMatch = smartMatch(scannedContent, expectedContent);
+                const resultEl = document.getElementById('compareResult');
+                const resultBox = document.getElementById('resultInfo');
+
+                if (isMatch) {
+                    resultEl.textContent = '✓ 校验通过';
+                    resultEl.className = 'record-result success';
+                    resultBox.classList.add('success');
+                    resultBox.classList.remove('error');
+                } else {
+                    resultEl.textContent = '✗ 校验失败';
+                    resultEl.className = 'record-result error';
+                    resultBox.classList.add('error');
+                    resultBox.classList.remove('success');
+                }
+
+                saveRecord(currentPartNumber, expectedContent, scannedContent, isMatch);
+                stopScanning();
+                document.getElementById('resetBtn').classList.remove('hidden');
+                playBeep(isMatch);
+            }
+        }
+
+        function onScanError(errorMessage) {
+            // 忽略常规错误
+        }
+
+        function updateStepIndicator() {
+            const step1El = document.getElementById('step1');
+            const step2El = document.getElementById('step2');
+
+            if (currentStep === 1) {
+                step1El.classList.add('active');
+                step1El.classList.remove('completed');
+                step2El.classList.remove('active');
+            } else if (currentStep === 2) {
+                step1El.classList.remove('active');
+                step1El.classList.add('completed');
+                step2El.classList.add('active');
+            }
+        }
+
+        function resetValidation() {
+            currentStep = 1;
+            currentPartNumber = '';
+            expectedContent = '';
+
+            document.getElementById('partInfo').classList.add('hidden');
+            document.getElementById('resultInfo').classList.add('hidden');
+            document.getElementById('resetBtn').classList.add('hidden');
+
+            updateStepIndicator();
+            updateStartButtonText(); // 使用统一的按钮文字更新函数
+
+            // 重新开始，显示开始按钮
+            document.getElementById('startScanBtn').classList.remove('hidden');
+        }
+
+        function saveRecord(partNum, expected, scanned, isMatch) {
+            const record = {
+                timestamp: new Date().toLocaleString('zh-CN'),
+                partNumber: partNum,
+                expectedContent: expected,
+                scannedContent: scanned,
+                result: isMatch ? '通过' : '失败',
+                isSuccess: isMatch,
+                matchMode: matchMode
+            };
+
+            records.unshift(record);
+
+            if (records.length > 500) {
+                records = records.slice(0, 500);
+            }
+
+            // 同步保存
+            syncRecords();
+            displayRecords();
+        }
+
+        function displayRecords() {
+            const container = document.getElementById('recordsContainer');
+
+            if (records.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">暂无校验记录</div>';
+                return;
+            }
+
+            let html = '';
+            records.forEach((record, index) => {
+                const statusClass = record.isSuccess ? 'success' : 'error';
+                html += `
+                    <div class="record-item ${statusClass}">
+                        <div class="record-time">${record.timestamp}</div>
+                        <div class="record-content">
+                            <strong>零件号：</strong>${record.partNumber}<br>
+                            <strong>期望校验：</strong>${record.expectedContent}<br>
+                            <strong>实际扫描：</strong>${record.scannedContent}
+                        </div>
+                        <div class="record-result ${statusClass}">${record.result}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            if (records.length === 0) {
+                alert('暂无记录可导出！');
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                alert('Excel导出库加载失败，请刷新页面重试！');
+                return;
+            }
+
+            const exportData = [
+                ['时间', '零件号', '期望校验内容', '实际扫描内容', '校验结果']
+            ];
+
+            records.forEach(record => {
+                exportData.push([
+                    record.timestamp,
+                    record.partNumber,
+                    record.expectedContent,
+                    record.scannedContent,
+                    record.result
+                ]);
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+
+            ws['!cols'] = [
+                { wch: 20 },
+                { wch: 15 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 10 }
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, '校验记录');
+
+            const fileName = `线边料位校验记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '')}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        });
+
+        document.getElementById('clearRecordsBtn').addEventListener('click', function() {
+            if (records.length === 0) {
+                alert('暂无记录可清空！');
+                return;
+            }
+
+            if (confirm('确定要清空所有校验记录吗？此操作不可恢复！')) {
+                records = [];
+                syncRecords();
+                displayRecords();
+                alert('记录已清空！');
+            }
+        });
+
+        function playBeep(success = true) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = success ? 800 : 400;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+    </script>
+</body>
+</html>
