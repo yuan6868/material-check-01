@@ -367,6 +367,119 @@
                 padding: 10px 5px;
             }
         }
+
+        /* 配置对话框样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-hint {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .modal-btn-cancel {
+            background: #e5e7eb;
+            color: #666;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #d1d5db;
+        }
     </style>
 </head>
 <body>
@@ -739,19 +852,59 @@
         // 配置数据URL按钮
         document.getElementById('configUrlBtn').addEventListener('click', function() {
             const currentUrl = localStorage.getItem('dataUrl') || '';
-            const newUrl = prompt(
-                '请输入数据源地址（CSV文件URL）：\n\n' +
-                '支持的格式：\n' +
-                '• GitHub Raw URL\n' +
-                '• Gitee Raw URL\n' +
-                '• 任何可访问的CSV文件URL\n\n' +
-                '文件格式：第一列零件号，第二列校验内容',
-                currentUrl
-            );
+            const modal = document.getElementById('configModal');
+            const input = document.getElementById('dataUrlInput');
 
-            if (newUrl && newUrl.trim()) {
-                localStorage.setItem('dataUrl', newUrl.trim());
-                alert('数据源地址已更新！\n点击"刷新数据"加载新数据。');
+            // 显示当前配置的URL
+            input.value = currentUrl;
+
+            // 显示对话框
+            modal.classList.add('active');
+
+            // 聚焦到输入框
+            setTimeout(() => input.focus(), 100);
+        });
+
+        // 取消按钮
+        document.getElementById('modalCancelBtn').addEventListener('click', function() {
+            document.getElementById('configModal').classList.remove('active');
+        });
+
+        // 点击遮罩层关闭
+        document.getElementById('configModal').addEventListener('click', function(e) {
+            if (e.target.id === 'configModal') {
+                this.classList.remove('active');
+            }
+        });
+
+        // 保存按钮
+        document.getElementById('modalSaveBtn').addEventListener('click', function() {
+            const input = document.getElementById('dataUrlInput');
+            const newUrl = input.value.trim();
+
+            if (newUrl) {
+                localStorage.setItem('dataUrl', newUrl);
+                document.getElementById('configModal').classList.remove('active');
+
+                // 显示成功提示
+                const statusEl = document.getElementById('dataStatus');
+                statusEl.textContent = '✓ 数据源地址已更新！请点击"刷新数据"按钮加载';
+                statusEl.style.background = '#d1fae5';
+                statusEl.style.color = '#065f46';
+
+                // 3秒后恢复
+                setTimeout(() => {
+                    updateDataStatus();
+                }, 3000);
+            } else {
+                alert('请输入有效的URL地址');
+            }
+        });
+
+        // 输入框回车键保存
+        document.getElementById('dataUrlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('modalSaveBtn').click();
             }
         });
 
@@ -1241,5 +1394,33 @@
             }
         }
     </script>
+
+    <!-- 配置数据源对话框 -->
+    <div id="configModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">⚙️ 配置数据源地址</div>
+            <div class="modal-body">
+                <label class="modal-label">请输入CSV文件URL：</label>
+                <input
+                    type="text"
+                    id="dataUrlInput"
+                    class="modal-input"
+                    placeholder="https://your-domain.com/data.csv"
+                />
+                <div class="modal-hint">
+                    <strong>支持的格式：</strong><br>
+                    • GitHub Pages: https://username.github.io/repo/data.csv<br>
+                    • GitHub Raw: https://raw.githubusercontent.com/...<br>
+                    • Gitee Raw: https://gitee.com/username/repo/raw/master/data.csv<br>
+                    • 任何可访问的CSV文件URL<br><br>
+                    <strong>文件格式：</strong>第一列零件号，第二列校验内容
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="modalCancelBtn" class="modal-btn modal-btn-cancel">取消</button>
+                <button id="modalSaveBtn" class="modal-btn modal-btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
