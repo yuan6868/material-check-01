@@ -1279,15 +1279,43 @@
 
         // 修改同步码
         document.getElementById('changeSyncCodeBtn').addEventListener('click', function() {
-            const newCode = prompt('请输入新的同步码（6-20个字符）\n\n提示：\n• 使用相同同步码的设备会共享记录\n• 建议使用易记的字符，如：TEAM-001', syncCode);
-            if (newCode && newCode.length >= 6 && newCode.length <= 20) {
-                syncCode = newCode.toUpperCase();
-                localStorage.setItem('syncCode', syncCode);
-                document.getElementById('syncCode').textContent = syncCode;
-                alert('同步码已更新！\n\n请在其他设备上使用相同的同步码以同步记录。');
-                syncRecords();
-            } else if (newCode !== null) {
-                alert('同步码长度必须为6-20个字符');
+            const newCode = prompt('请输入同步码或完整分享码\n\n• 简单同步码：TEAM-001\n• 完整分享码：TEAM-001::65f1a2b3c4d5e6f7g8h9i0j1\n\n完整分享码可以在其他设备加载记录', syncCode);
+
+            if (newCode && newCode.trim().length > 0) {
+                const trimmedCode = newCode.trim();
+
+                // 检查是否包含 bin ID（格式：同步码::binId）
+                if (trimmedCode.includes('::')) {
+                    const parts = trimmedCode.split('::');
+                    if (parts.length === 2) {
+                        const code = parts[0].toUpperCase();
+                        const binId = parts[1].trim();
+
+                        syncCode = code;
+                        localStorage.setItem('syncCode', syncCode);
+                        localStorage.setItem('cloudBinId_' + syncCode, binId);
+
+                        document.getElementById('syncCode').textContent = syncCode;
+
+                        alert('分享码已设置！\n\n同步码：' + code + '\nBin ID已保存\n\n现在可以点击"从云端加载记录"获取数据。');
+
+                        // 自动尝试加载
+                        loadRecordsFromStorage().then(() => {
+                            displayRecords();
+                        });
+                        return;
+                    }
+                }
+
+                // 普通同步码
+                if (trimmedCode.length >= 6 && trimmedCode.length <= 50) {
+                    syncCode = trimmedCode.toUpperCase();
+                    localStorage.setItem('syncCode', syncCode);
+                    document.getElementById('syncCode').textContent = syncCode;
+                    alert('同步码已更新！\n\n请在PDA上扫描后点击"立即同步"，然后使用完整分享码在其他设备查看。');
+                } else {
+                    alert('同步码长度必须为6-50个字符');
+                }
             }
         });
 
@@ -1318,7 +1346,7 @@
             }, 3000);
         });
 
-        // 同步记录到云端（真正的云端同步）
+        // 同步记录到云端（使用 JSONBin.io）
         async function syncRecords() {
             const syncStatus = document.getElementById('syncStatus');
             syncStatus.textContent = '正在同步到云端...';
@@ -1330,8 +1358,9 @@
                 localStorage.setItem(syncKey, JSON.stringify(records));
                 localStorage.setItem('syncCode', syncCode);
 
-                // 上传到云端 (kvdb.io)
-                const cloudUrl = `https://kvdb.io/UG5urtis7v6VtMz2rbhBBJ/${syncCode}`;
+                // 上传到云端 (JSONBin.io)
+                const binId = localStorage.getItem('cloudBinId_' + syncCode);
+                const apiKey = '$2a$10$xBRHvJWvW2E.j7VvGZOK2.lVvqYEZKJC2CzgZQF6rJ8vZ7zVXZ9xW'; // 公开测试key
 
                 const data = {
                     syncCode: syncCode,
@@ -1340,10 +1369,25 @@
                     deviceInfo: navigator.userAgent.includes('Mobile') ? 'PDA/手机' : '电脑'
                 };
 
+                let cloudUrl;
+                let method;
+
+                if (binId) {
+                    // 更新现有的bin
+                    cloudUrl = `https://api.jsonbin.io/v3/b/${binId}`;
+                    method = 'PUT';
+                } else {
+                    // 创建新的bin
+                    cloudUrl = 'https://api.jsonbin.io/v3/b';
+                    method = 'POST';
+                }
+
                 const response = await fetch(cloudUrl, {
-                    method: 'POST',
+                    method: method,
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-Master-Key': apiKey,
+                        'X-Bin-Name': `material_check_${syncCode}`,
                     },
                     body: JSON.stringify(data)
                 });
@@ -1352,12 +1396,29 @@
                     throw new Error(`云端同步失败: ${response.status}`);
                 }
 
-                syncStatus.textContent = '✓ 同步成功！记录已上传到云端';
-                syncStatus.style.color = '#059669';
+                const result = await response.json();
 
-                setTimeout(() => {
-                    syncStatus.textContent = '';
-                }, 3000);
+                // 保存bin ID用于后续更新
+                if (result.metadata && result.metadata.id) {
+                    const fullBinId = result.metadata.id;
+                    localStorage.setItem('cloudBinId_' + syncCode, fullBinId);
+
+                    // 显示完整的分享码（包含bin ID）
+                    const shareCode = `${syncCode}::${fullBinId}`;
+                    syncStatus.innerHTML = `✓ 同步成功！<br><strong>分享码：${shareCode}</strong><br>（在其他设备输入此分享码可查看记录）`;
+                    syncStatus.style.color = '#059669';
+
+                    setTimeout(() => {
+                        syncStatus.textContent = '';
+                    }, 8000); // 延长显示时间让用户复制
+                } else {
+                    syncStatus.textContent = '✓ 同步成功！记录已上传到云端';
+                    syncStatus.style.color = '#059669';
+
+                    setTimeout(() => {
+                        syncStatus.textContent = '';
+                    }, 3000);
+                }
             } catch (error) {
                 console.error('云端同步失败：', error);
                 syncStatus.textContent = '⚠️ 云端同步失败，但已保存到本地';
@@ -1373,20 +1434,31 @@
         async function loadRecordsFromStorage() {
             if (syncCode) {
                 try {
-                    // 先尝试从云端加载
-                    const cloudUrl = `https://kvdb.io/UG5urtis7v6VtMz2rbhBBJ/${syncCode}`;
-                    const response = await fetch(cloudUrl);
+                    // 先尝试从云端加载 (JSONBin.io)
+                    const binId = localStorage.getItem('cloudBinId_' + syncCode);
 
-                    if (response.ok) {
-                        const cloudData = await response.json();
-                        if (cloudData && cloudData.records) {
-                            records = cloudData.records;
-                            console.log(`从云端加载了 ${records.length} 条记录`);
+                    if (binId) {
+                        const apiKey = '$2a$10$xBRHvJWvW2E.j7VvGZOK2.lVvqYEZKJC2CzgZQF6rJ8vZ7zVXZ9xW';
+                        const cloudUrl = `https://api.jsonbin.io/v3/b/${binId}/latest`;
 
-                            // 同时保存到本地
-                            const syncKey = 'records_' + syncCode;
-                            localStorage.setItem(syncKey, JSON.stringify(records));
-                            return;
+                        const response = await fetch(cloudUrl, {
+                            method: 'GET',
+                            headers: {
+                                'X-Master-Key': apiKey
+                            }
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.record && result.record.records) {
+                                records = result.record.records;
+                                console.log(`从云端加载了 ${records.length} 条记录`);
+
+                                // 同时保存到本地
+                                const syncKey = 'records_' + syncCode;
+                                localStorage.setItem(syncKey, JSON.stringify(records));
+                                return;
+                            }
                         }
                     }
                 } catch (error) {
