@@ -514,8 +514,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>线边料位校验系统 v3.2-PDA</h1>
-            <p>远程数据 | 扫描枪快速输入 | 离线缓存 | 智能校验</p>
+            <h1>线边料位校验系统 v3.5-PDA</h1>
+            <p>远程数据 | 全自动流转 | 云端同步 | 智能校验</p>
         </div>
 
         <div id="loadingStatus" class="loading-status">
@@ -603,19 +603,16 @@
                 </div>
             </div>
 
-            <!-- 步骤1结果显示 -->
+            <!-- 步骤1结果显示（过渡提示） -->
             <div id="partInfo" class="info-box hidden">
                 <div class="info-label">✓ 已扫描零件号：</div>
                 <div class="info-value" id="partNumber"></div>
                 <div class="info-label" style="margin-top: 10px;">📋 对应校验内容：</div>
                 <div class="info-value" id="expectedContent"></div>
-                <div style="margin-top: 20px; text-align: center; padding: 15px; background: #fef3c7; border-radius: 8px; border: 2px solid #f59e0b;">
-                    <div style="font-size: 16px; font-weight: bold; color: #92400e; margin-bottom: 5px;">
-                        ⌨️ 确认无误后，继续扫描校验内容
+                <div style="margin-top: 15px; text-align: center; padding: 12px; background: #e0e7ff; border-radius: 8px;">
+                    <div style="font-size: 15px; font-weight: bold; color: #3730a3;">
+                        ⏱️ 即将自动进入步骤二，准备扫描校验内容...
                     </div>
-                    <button id="continueToStep2Btn" class="btn btn-success" style="margin-top: 10px;">
-                        ▶ 继续步骤二
-                    </button>
                 </div>
             </div>
 
@@ -643,22 +640,43 @@
                 <div class="record-result" id="compareResult"></div>
             </div>
 
-            <button id="resetBtn" class="btn hidden" style="margin-top: 10px;">🔄 重新开始新的校验</button>
+            <button id="resetBtn" class="btn hidden" style="margin-top: 10px;">🔄 重新扫描零件号（返回步骤一）</button>
         </div>
 
-        <!-- 云端同步区域 -->
+        <!-- 记录管理区域 -->
         <div class="section">
-            <div class="section-title">🌐 记录同步</div>
-            <div class="sync-section">
-                <div style="font-weight: bold; margin-bottom: 10px; color: #1e40af;">同步码：</div>
-                <div class="sync-code" id="syncCode">-</div>
-                <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
-                    • 手机和电脑使用<strong>相同的同步码</strong>，记录会自动同步<br>
-                    • 同步码保存在浏览器中，下次打开自动恢复<br>
-                    • 可以自定义同步码，方便团队共享
+            <div class="section-title">💾 记录管理</div>
+
+            <!-- Excel导出（主要功能） -->
+            <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #3b82f6;">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #1e40af; font-size: 16px;">
+                    📥 导出Excel表格
                 </div>
-                <button id="changeSyncCodeBtn" class="btn btn-warning">🔑 修改同步码</button>
-                <button id="syncNowBtn" class="btn" style="margin-top: 5px;">🔄 立即同步记录</button>
+                <div style="font-size: 13px; color: #666; margin-bottom: 15px; line-height: 1.6;">
+                    • 点击下方"导出Excel"按钮，下载所有校验记录<br>
+                    • Excel文件包含完整的时间、零件号、校验结果<br>
+                    • 可通过微信/邮件/网盘传输到其他设备查看<br>
+                    • <strong>建议每天结束后导出备份</strong>
+                </div>
+                <button id="exportBtnTop" class="btn btn-success" style="font-size: 16px; padding: 15px;">
+                    📥 导出Excel表格
+                </button>
+            </div>
+
+            <!-- 云端同步功能 -->
+            <div class="sync-section">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #1e40af;">云端同步码：</div>
+                <div class="sync-code" id="syncCode">-</div>
+                <div style="font-size: 13px; color: #666; margin-bottom: 15px; line-height: 1.6;">
+                    <strong>📡 跨设备同步功能：</strong><br>
+                    • PDA扫描后点击"立即同步"上传到云端<br>
+                    • 电脑访问网页，输入相同同步码即可查看记录<br>
+                    • 支持多设备实时共享记录<br>
+                    • <strong style="color: #059669;">完全免费，无需注册</strong>
+                </div>
+                <button id="changeSyncCodeBtn" class="btn btn-warning" style="margin-bottom: 5px;">🔑 修改同步码</button>
+                <button id="syncNowBtn" class="btn btn-success" style="margin-bottom: 5px;">📡 立即同步到云端</button>
+                <button id="loadFromCloudBtn" class="btn" style="margin-bottom: 5px;">☁️ 从云端加载记录</button>
                 <div id="syncStatus" style="margin-top: 10px; font-size: 13px; color: #059669; text-align: center;"></div>
             </div>
         </div>
@@ -686,9 +704,9 @@
         let syncCode = '';
         let matchMode = 'exact';
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             initSyncCode();
-            loadRecordsFromStorage();
+            await loadRecordsFromStorage();  // 等待从云端加载记录
             displayRecords();
 
             // 初始化数据URL
@@ -801,11 +819,6 @@
                     handleValidationScan(this.value.trim());
                     this.value = ''; // 清空输入框
                 }
-            });
-
-            // 继续到步骤二按钮
-            document.getElementById('continueToStep2Btn').addEventListener('click', function() {
-                continueToStep2();
             });
 
             // 重新开始按钮
@@ -1025,12 +1038,17 @@
                 document.getElementById('partNumber').textContent = currentPartNumber;
                 document.getElementById('expectedContent').textContent = expectedContent;
 
-                // 隐藏步骤1输入区域，显示结果
+                // 隐藏步骤1输入区域，显示结果信息（短暂）
                 document.getElementById('step1Area').classList.add('hidden');
                 document.getElementById('partInfo').classList.remove('hidden');
 
                 updateStepIndicator();
                 playBeep(true);
+
+                // 自动进入步骤二（延迟1秒，让用户看到零件号信息）
+                setTimeout(() => {
+                    continueToStep2();
+                }, 1000);
             } else {
                 playBeep(false);
                 alert(`未找到零件号：${scannedText}\n\n请检查：\n1. 数据是否已加载\n2. 扫描内容是否正确\n3. 尝试调整匹配模式`);
@@ -1062,24 +1080,42 @@
             const resultBox = document.getElementById('resultInfo');
 
             if (isMatch) {
-                resultEl.textContent = '✓ 校验通过';
+                resultEl.textContent = '✓ 校验通过 - 即将自动开始下一个...';
                 resultEl.className = 'record-result success';
                 resultBox.classList.add('success');
                 resultBox.classList.remove('error');
+
+                // 校验成功：隐藏输入框
+                document.getElementById('step2Area').classList.add('hidden');
+
+                saveRecord(currentPartNumber, expectedContent, scannedContent, isMatch);
+                playBeep(isMatch);
+
+                // 延迟2秒后自动返回步骤一（让用户看到成功提示）
+                setTimeout(() => {
+                    resetValidation();
+                }, 2000);
             } else {
-                resultEl.textContent = '✗ 校验失败';
+                resultEl.textContent = '✗ 校验失败 - 请重新扫描校验内容，或点击下方按钮重新扫描零件号';
                 resultEl.className = 'record-result error';
                 resultBox.classList.add('error');
                 resultBox.classList.remove('success');
+
+                // 校验失败：保持输入框显示，清空内容并重新聚焦
+                const validationInput = document.getElementById('validationInput');
+                validationInput.value = '';
+
+                // 显示重新开始按钮（返回步骤一）
+                document.getElementById('resetBtn').classList.remove('hidden');
+
+                saveRecord(currentPartNumber, expectedContent, scannedContent, isMatch);
+                playBeep(isMatch);
+
+                // 延迟聚焦，确保用户看到错误提示
+                setTimeout(() => {
+                    validationInput.focus();
+                }, 100);
             }
-
-            saveRecord(currentPartNumber, expectedContent, scannedContent, isMatch);
-
-            // 隐藏步骤2输入区域
-            document.getElementById('step2Area').classList.add('hidden');
-            document.getElementById('resetBtn').classList.remove('hidden');
-
-            playBeep(isMatch);
         }
 
         // 智能匹配函数
@@ -1260,34 +1296,114 @@
             syncRecords();
         });
 
-        // 同步记录到云端
-        function syncRecords() {
+        // 从云端加载记录按钮
+        document.getElementById('loadFromCloudBtn').addEventListener('click', async function() {
             const syncStatus = document.getElementById('syncStatus');
-            syncStatus.textContent = '正在同步...';
+            syncStatus.textContent = '正在从云端加载...';
+            syncStatus.style.color = '#f59e0b';
 
-            const syncKey = 'records_' + syncCode;
-            localStorage.setItem(syncKey, JSON.stringify(records));
-            localStorage.setItem('syncCode', syncCode);
+            await loadRecordsFromStorage();
+            displayRecords();
+
+            if (records.length > 0) {
+                syncStatus.textContent = `✓ 成功加载 ${records.length} 条记录`;
+                syncStatus.style.color = '#059669';
+            } else {
+                syncStatus.textContent = '⚠️ 云端暂无记录';
+                syncStatus.style.color = '#666';
+            }
 
             setTimeout(() => {
-                syncStatus.textContent = '✓ 同步成功！记录已保存';
+                syncStatus.textContent = '';
+            }, 3000);
+        });
+
+        // 同步记录到云端（真正的云端同步）
+        async function syncRecords() {
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.textContent = '正在同步到云端...';
+            syncStatus.style.color = '#f59e0b';
+
+            try {
+                // 保存到本地
+                const syncKey = 'records_' + syncCode;
+                localStorage.setItem(syncKey, JSON.stringify(records));
+                localStorage.setItem('syncCode', syncCode);
+
+                // 上传到云端 (kvdb.io)
+                const cloudUrl = `https://kvdb.io/UG5urtis7v6VtMz2rbhBBJ/${syncCode}`;
+
+                const data = {
+                    syncCode: syncCode,
+                    records: records,
+                    lastUpdate: new Date().toISOString(),
+                    deviceInfo: navigator.userAgent.includes('Mobile') ? 'PDA/手机' : '电脑'
+                };
+
+                const response = await fetch(cloudUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`云端同步失败: ${response.status}`);
+                }
+
+                syncStatus.textContent = '✓ 同步成功！记录已上传到云端';
+                syncStatus.style.color = '#059669';
+
                 setTimeout(() => {
                     syncStatus.textContent = '';
                 }, 3000);
-            }, 500);
+            } catch (error) {
+                console.error('云端同步失败：', error);
+                syncStatus.textContent = '⚠️ 云端同步失败，但已保存到本地';
+                syncStatus.style.color = '#ef4444';
+
+                setTimeout(() => {
+                    syncStatus.textContent = '';
+                }, 5000);
+            }
         }
 
         // 从云端加载记录
-        function loadRecordsFromStorage() {
+        async function loadRecordsFromStorage() {
             if (syncCode) {
+                try {
+                    // 先尝试从云端加载
+                    const cloudUrl = `https://kvdb.io/UG5urtis7v6VtMz2rbhBBJ/${syncCode}`;
+                    const response = await fetch(cloudUrl);
+
+                    if (response.ok) {
+                        const cloudData = await response.json();
+                        if (cloudData && cloudData.records) {
+                            records = cloudData.records;
+                            console.log(`从云端加载了 ${records.length} 条记录`);
+
+                            // 同时保存到本地
+                            const syncKey = 'records_' + syncCode;
+                            localStorage.setItem(syncKey, JSON.stringify(records));
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.log('云端加载失败，尝试本地加载：', error);
+                }
+
+                // 如果云端加载失败，尝试本地
                 const syncKey = 'records_' + syncCode;
                 const savedRecords = localStorage.getItem(syncKey);
                 if (savedRecords) {
                     records = JSON.parse(savedRecords);
+                    console.log(`从本地加载了 ${records.length} 条记录`);
                     return;
                 }
             }
 
+            // 兜底：加载默认本地记录
             const savedRecords = localStorage.getItem('validationRecords');
             if (savedRecords) {
                 records = JSON.parse(savedRecords);
